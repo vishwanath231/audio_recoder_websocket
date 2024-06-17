@@ -26,7 +26,7 @@ class AudioRecordingProvider extends ChangeNotifier {
   int get playbackPosition => _playbackPosition;
 
   void _initWebSocket() {
-    _socket = IO.io('http://192.168.1.35:5001', <String, dynamic>{
+    _socket = IO.io('wss://demo.carebells.org', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
