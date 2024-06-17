@@ -76,6 +76,9 @@ class _HomePageState extends State<HomePage> {
       _recordingTimer?.cancel();
       if (filePath != null) {
         recordingProvider.stopRecording(filePath);
+
+        // Start playback immediately after recording stops
+        _startPlayback(filePath, recordingProvider);
       }
     } else {
       if (await audioRecorder.hasPermission()) {

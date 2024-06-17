@@ -26,7 +26,7 @@ class AudioRecordingProvider extends ChangeNotifier {
   int get playbackPosition => _playbackPosition;
 
   void _initWebSocket() {
-    _socket = IO.io('wss://demo.carebells.org', <String, dynamic>{
+    _socket = IO.io('http://192.168.1.35:5001', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
@@ -41,10 +41,18 @@ class AudioRecordingProvider extends ChangeNotifier {
       print('Disconnected from WebSocket server');
     });
 
-    _socket.on('audio_data', (data) {
-      if (data != null && data['audio'] != null) {
-        _saveAudioLocally(List<int>.from(data['audio']));
-      }
+    // _socket.on('audio_data', (data) {
+    //     print(data);
+    //   if (data != null && data['audio'] != null) {
+    //     _saveAudioLocally(List<int>.from(data['audio']));
+    //   }
+    // });
+
+    _socket.on('message', (data) {
+      print('Received audio data');
+      Map<String, dynamic> message = data as Map<String, dynamic>;
+      List<int> audioData = List<int>.from(message['audio']);
+      _saveAudioLocally(audioData);
     });
   }
 
@@ -52,7 +60,14 @@ class AudioRecordingProvider extends ChangeNotifier {
     File audioFile = File(filePath);
     if (await audioFile.exists()) {
       List<int> audioBytes = await audioFile.readAsBytes();
-      _socket.emit('audio', audioBytes);
+      Map<String, dynamic> response = {
+        "user_id": 1,
+        "prompt": {
+          "audio": audioBytes,
+          "text": "test"
+        }
+      };
+      _socket.emit('audio', response);
     }
   }
 
