@@ -41,19 +41,21 @@ class AudioRecordingProvider extends ChangeNotifier {
       print('Disconnected from WebSocket server');
     });
 
-    // _socket.on('audio_data', (data) {
-    //     print(data);
-    //   if (data != null && data['audio'] != null) {
-    //     _saveAudioLocally(List<int>.from(data['audio']));
-    //   }
-    // });
-
-    _socket.on('message', (data) {
-      print('Received audio data');
+    _socket.on('audio_data', (data) {
+      // if (data != null && data['audio'] != null) {
+      //   _saveAudioLocally(List<int>.from(data['audio']));
+      // }
       Map<String, dynamic> message = data as Map<String, dynamic>;
       List<int> audioData = List<int>.from(message['audio']);
       _saveAudioLocally(audioData);
     });
+
+    // _socket.on('message', (data) {
+    //   print('Received audio data');
+    //   Map<String, dynamic> message = data as Map<String, dynamic>;
+    //   List<int> audioData = List<int>.from(message['audio']);
+    //   _saveAudioLocally(audioData);
+    // });
   }
 
   Future<void> _sendAudioToWebSocket(String filePath) async {
