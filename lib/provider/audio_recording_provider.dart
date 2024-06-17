@@ -1,20 +1,18 @@
-// lib/provider/audio_recording_provider.dart
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'dart:convert';
 
 class AudioRecordingProvider extends ChangeNotifier {
   String? _recordingPath;
   bool _isRecording = false;
   bool _isPlaying = false;
+  bool _isLoading = false;
   int _recordingDuration = 0;
   int _playbackPosition = 0;
   late IO.Socket _socket;
-  List<int>? audioChuck;
 
   AudioRecordingProvider() {
     _initWebSocket();
@@ -23,6 +21,7 @@ class AudioRecordingProvider extends ChangeNotifier {
   String? get recordingPath => _recordingPath;
   bool get isRecording => _isRecording;
   bool get isPlaying => _isPlaying;
+  bool get isLoading => _isLoading;
   int get recordingDuration => _recordingDuration;
   int get playbackPosition => _playbackPosition;
 
@@ -32,45 +31,21 @@ class AudioRecordingProvider extends ChangeNotifier {
       'autoConnect': false,
     });
 
+    _socket.connect();
 
-    try {
-      // Attempt to connect to the WebSocket server
-      _socket.connect();
-      print('Attempting to connect to WebSocket server...');
+    _socket.onConnect((_) {
+      print('Connected to WebSocket server');
+    });
 
-      // Handle the connect event
-      _socket.onConnect((_) {
-        print('Connected to WebSocket server');
-      });
+    _socket.onDisconnect((_) {
+      print('Disconnected from WebSocket server');
+    });
 
-      // Handle the disconnect event
-      _socket.onDisconnect((_) {
-        print('Disconnected from WebSocket server');
-      });
-
-    } catch (e) {
-      // Handle any errors that occur during connection
-      print('Error connecting to WebSocket server: $e');
-    }
-
-    // _socket.connect();
-    //
-    // _socket.onConnect((_) {
-    //   print('Connected to WebSocket server');
-    // });
-    //
-    // _socket.onDisconnect((_) {
-    //   print('Disconnected from WebSocket server');
-    // });
-
-
-
-    // _socket.on('audio_data', (data) {
-    //   // print("audio chunk --------------> $data['audio_chunk']");
-    //   if (data != null && data['audio'] != null) {
-    //     _saveAudioLocally(data['audio']);
-    //   }
-    // });
+    _socket.on('audio_data', (data) {
+      if (data != null && data['audio'] != null) {
+        _saveAudioLocally(List<int>.from(data['audio']));
+      }
+    });
   }
 
   Future<void> _sendAudioToWebSocket(String filePath) async {
@@ -90,11 +65,8 @@ class AudioRecordingProvider extends ChangeNotifier {
 
   void stopRecording(String? path) {
     _isRecording = false;
-    _socket.on('audio_data', (data) {
-      if (data != null && data['audio'] != null) {
-          _saveAudioLocally(data['audio']);
-      }
-    });
+    _isLoading = true;
+    _recordingDuration = 0;
     notifyListeners();
 
     if (path != null) {
@@ -125,18 +97,15 @@ class AudioRecordingProvider extends ChangeNotifier {
   Future<void> _saveAudioLocally(List<int> audioBytes) async {
     try {
       final Directory appDocumentsDir = await getApplicationDocumentsDirectory();
-      final filePath = '${appDocumentsDir.path}/new_audio.mp3';
+      final filePath = '${appDocumentsDir.path}/beat.mp3';
 
-      // Write audio bytes to file
       await File(filePath).writeAsBytes(audioBytes);
-
-      // Set _recordingPath after saving
       _recordingPath = filePath;
 
+      _isLoading = false;
       notifyListeners();
     } catch (e) {
       print('Error saving audio locally: $e');
     }
   }
-
 }
