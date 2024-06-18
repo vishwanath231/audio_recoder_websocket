@@ -6,9 +6,9 @@
 <!-- Optional: Add this permission if you want to save your recordings in public folders -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <application
-        android:label="audio_recorder_app"
+        android:label="Carebells"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/launcher_icon"
         android:usesCleartextTraffic="true"
         >
         <activity
