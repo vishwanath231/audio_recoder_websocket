@@ -21,7 +21,7 @@ class _HomePageState extends State<HomePage> {
   final AudioRecorder audioRecorder = AudioRecorder();
   late AudioPlayer audioPlayer;
   Timer? _recordingTimer;
-  bool isPlaybackStarted = false; // Track playback state
+  bool isPlaybackStarted = false;
   StreamSubscription<Duration>? _playerSubscription;
 
   @override
@@ -39,7 +39,7 @@ class _HomePageState extends State<HomePage> {
       if (state.processingState == ProcessingState.completed) {
         context.read<AudioRecordingProvider>().stopPlaying();
         setState(() {
-          isPlaybackStarted = false; // Reset playback state
+          isPlaybackStarted = false;
         });
       }
     });
@@ -50,7 +50,7 @@ class _HomePageState extends State<HomePage> {
       context.read<AudioRecordingProvider>().stopPlaying();
       audioPlayer.stop();
       setState(() {
-        isPlaybackStarted = false; // Reset playback state
+        isPlaybackStarted = false;
       });
     }
   }
@@ -76,9 +76,7 @@ class _HomePageState extends State<HomePage> {
       _recordingTimer?.cancel();
       if (filePath != null) {
         recordingProvider.stopRecording(filePath);
-
-        // Start playback immediately after recording stops
-        _startPlayback(filePath, recordingProvider);
+        // No need to start playback here, as it will be handled in the provider
       }
     } else {
       if (await audioRecorder.hasPermission()) {
@@ -103,48 +101,12 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void _startPlayback(String filePath, AudioRecordingProvider recordingProvider) async {
-    if (isPlaybackStarted) {
-      _handlePlaybackCompleted();
-    }
-
-    await audioPlayer.setFilePath(filePath);
-    await audioPlayer.play();
-    setState(() {
-      recordingProvider.startPlaying();
-      isPlaybackStarted = true; // Set playback started flag
-    });
-
-    // Start monitoring playback duration
-    _monitorPlaybackDuration(recordingProvider);
-  }
-
-  void _monitorPlaybackDuration(AudioRecordingProvider recordingProvider) {
-    _playerSubscription?.onData((position) {
-      if (audioPlayer.duration != null && position >= audioPlayer.duration!) {
-        _handlePlaybackCompleted();
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Consumer<AudioRecordingProvider>(
         builder: (context, recordingProvider, child) {
-          if (recordingProvider.recordingPath != null &&
-              !recordingProvider.isLoading &&
-              !recordingProvider.isPlaying) {
-            // Start playback after the current build cycle completes
-            WidgetsBinding.instance!.addPostFrameCallback((_) {
-              _startPlayback(recordingProvider.recordingPath!, recordingProvider);
-            });
-          } else if (recordingProvider.isPlaying) {
-            // Check if audio playback duration has completed
-            _monitorPlaybackDuration(recordingProvider);
-          }
-
           return Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -162,7 +124,7 @@ class _HomePageState extends State<HomePage> {
                       border: Border.all(color: Colors.black),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),  // Semi-transparent black shadow
+                          color: Colors.black.withOpacity(0.1),
                           spreadRadius: 5,
                           blurRadius: 7,
                           offset: Offset(0, 3),

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:just_audio/just_audio.dart'; // Add this import
 
 class AudioRecordingProvider extends ChangeNotifier {
   String? _recordingPath;
@@ -13,9 +14,11 @@ class AudioRecordingProvider extends ChangeNotifier {
   int _recordingDuration = 0;
   int _playbackPosition = 0;
   late IO.Socket _socket;
+  late AudioPlayer _audioPlayer;
 
   AudioRecordingProvider() {
     _initWebSocket();
+    _audioPlayer = AudioPlayer();
   }
 
   String? get recordingPath => _recordingPath;
@@ -42,20 +45,10 @@ class AudioRecordingProvider extends ChangeNotifier {
     });
 
     _socket.on('audio_data', (data) {
-      // if (data != null && data['audio'] != null) {
-      //   _saveAudioLocally(List<int>.from(data['audio']));
-      // }
       Map<String, dynamic> message = data as Map<String, dynamic>;
       List<int> audioData = List<int>.from(message['audio']);
       _saveAudioLocally(audioData);
     });
-
-    // _socket.on('message', (data) {
-    //   print('Received audio data');
-    //   Map<String, dynamic> message = data as Map<String, dynamic>;
-    //   List<int> audioData = List<int>.from(message['audio']);
-    //   _saveAudioLocally(audioData);
-    // });
   }
 
   Future<void> _sendAudioToWebSocket(String filePath) async {
@@ -121,8 +114,18 @@ class AudioRecordingProvider extends ChangeNotifier {
 
       _isLoading = false;
       notifyListeners();
+
+      // Play the beat.mp3 file automatically
+      await _playSavedAudio();
     } catch (e) {
       print('Error saving audio locally: $e');
+    }
+  }
+
+  Future<void> _playSavedAudio() async {
+    if (_recordingPath != null) {
+      await _audioPlayer.setFilePath(_recordingPath!);
+      await _audioPlayer.play();
     }
   }
 }
