@@ -30,7 +30,7 @@ class AudioRecordingProvider extends ChangeNotifier {
   int get playbackPosition => _playbackPosition;
 
   void _initWebSocket() {
-    _socket = IO.io('https://demo.carebells.org', <String, dynamic>{
+    _socket = IO.io('wss://demo.carebells.org', <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
@@ -124,19 +124,30 @@ class AudioRecordingProvider extends ChangeNotifier {
 
   Future<void> _playAudioFromBytes(List<int> audioBytes) async {
     try {
-      // Save audio bytes to a temporary file
-      // Create a Stream of bytes from the List<int>
-      final stream = Stream.value(audioBytes).asBroadcastStream();
 
-      // Set the audio source to the AudioPlayer from bytes
-      await _audioPlayer.setAudioSource(
-        AudioSource.uri(
-          Uri.dataFromBytes(
-            audioBytes,
-            mimeType: 'audio/mpeg', // Adjust mime type as necessary
-          ),
-        ),
-      );
+
+      // Save audio bytes to a temporary file
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/temp_audio.mp3');
+      await tempFile.writeAsBytes(audioBytes);
+
+      // Set the audio source to the AudioPlayer
+      await _audioPlayer.setFilePath(tempFile.path);
+
+
+
+      // // Create a Stream of bytes from the List<int>
+      // final stream = Stream.value(audioBytes).asBroadcastStream();
+      //
+      // // Set the audio source to the AudioPlayer from bytes
+      // await _audioPlayer.setAudioSource(
+      //   AudioSource.uri(
+      //     Uri.dataFromBytes(
+      //       audioBytes,
+      //       mimeType: 'audio/mpeg', // Adjust mime type as necessary
+      //     ),
+      //   ),
+      // );
 
       _isLoading = false;
       notifyListeners();
