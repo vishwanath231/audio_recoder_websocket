@@ -46,6 +46,7 @@ class AudioRecordingProvider extends ChangeNotifier {
     });
 
     _socket.on('audio_data', (data) {
+      print("========================================> audio received");
 
       Map<String, dynamic> message = data as Map<String, dynamic>;
       List<int> audioData = List<int>.from(message['audio']);
@@ -56,6 +57,8 @@ class AudioRecordingProvider extends ChangeNotifier {
 
 
   Future<void> _sendAudioToWebSocket(String filePath) async {
+
+    print("========================================> audio send processing...");
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     int? _userId = prefs.getInt('user_id');
@@ -72,6 +75,9 @@ class AudioRecordingProvider extends ChangeNotifier {
           }
         };
         _socket.emit('audio', response);
+
+        print("========================================> audio sended compledted");
+
       }
     }else {
       print("id not found!");
