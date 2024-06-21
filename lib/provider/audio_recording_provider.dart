@@ -3,9 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'package:just_audio/just_audio.dart'; // Add this import
+import 'package:just_audio/just_audio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 
 class AudioRecordingProvider extends ChangeNotifier {
   String? _recordingPath;
@@ -16,6 +15,7 @@ class AudioRecordingProvider extends ChangeNotifier {
   int _playbackPosition = 0;
   late IO.Socket _socket;
   late AudioPlayer _audioPlayer;
+  bool _socketConnected = false; // Track WebSocket connection state
 
   AudioRecordingProvider() {
     _initWebSocket();
@@ -35,14 +35,14 @@ class AudioRecordingProvider extends ChangeNotifier {
       'autoConnect': false,
     });
 
-    _socket.connect();
-
     _socket.onConnect((_) {
       print('Connected to WebSocket server');
+      _socketConnected = true;
     });
 
     _socket.onDisconnect((_) {
       print('Disconnected from WebSocket server');
+      _socketConnected = false;
     });
 
     _socket.on('audio_data', (data) {
@@ -52,18 +52,18 @@ class AudioRecordingProvider extends ChangeNotifier {
       List<int> audioData = List<int>.from(message['audio']);
       _playAudioFromBytes(audioData);
     });
+
+    // Connect WebSocket manually
+    connectWebSocket();
   }
 
-
-
   Future<void> _sendAudioToWebSocket(String filePath) async {
-
     print("========================================> audio send processing...");
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     int? _userId = prefs.getInt('user_id');
 
-    if(_userId != null){
+    if (_userId != null) {
       File audioFile = File(filePath);
       if (await audioFile.exists()) {
         List<int> audioBytes = await audioFile.readAsBytes();
@@ -76,13 +76,12 @@ class AudioRecordingProvider extends ChangeNotifier {
         };
         _socket.emit('audio', response);
 
-        print("========================================> audio sended compledted");
+        print("========================================> audio sent completed");
 
       }
-    }else {
+    } else {
       print("id not found!");
     }
-
   }
 
   void startRecording() {
@@ -125,6 +124,7 @@ class AudioRecordingProvider extends ChangeNotifier {
 
   Future<void> _playAudioFromBytes(List<int> audioBytes) async {
     try {
+      // Save audio bytes to a temporary file
       // Create a Stream of bytes from the List<int>
       final stream = Stream.value(audioBytes).asBroadcastStream();
 
@@ -137,14 +137,36 @@ class AudioRecordingProvider extends ChangeNotifier {
           ),
         ),
       );
+
       _isLoading = false;
       notifyListeners();
 
       // Play the audio
       await _audioPlayer.play();
-
     } catch (e) {
       print('Error playing audio: $e');
     }
+  }
+
+  // Disconnect WebSocket manually
+  void disconnectWebSocket() {
+    if (_socketConnected) {
+      _socket.disconnect();
+      _socketConnected = false;
+    }
+  }
+
+  // Connect WebSocket manually
+  void connectWebSocket() {
+    if (!_socketConnected) {
+      _socket.connect();
+    }
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose(); // Dispose AudioPlayer when done
+    disconnectWebSocket(); // Disconnect WebSocket when provider is disposed
+    super.dispose();
   }
 }

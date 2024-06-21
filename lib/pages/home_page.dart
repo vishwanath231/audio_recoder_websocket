@@ -2,15 +2,13 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_recorder_app/components/loader.dart';
-import 'package:audio_recorder_app/pages/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
-import 'package:record/record.dart';
-import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:provider/provider.dart';
+import 'package:record/record.dart';
 import '../provider/audio_recording_provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -20,39 +18,40 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final AudioRecorder audioRecorder = AudioRecorder();
-  late AudioPlayer audioPlayer;
+  late AudioPlayer _audioPlayer;
+  late AudioRecorder _audioRecorder;
   Timer? _recordingTimer;
-  bool isPlaybackStarted = false;
+  bool _isPlaybackStarted = false;
   StreamSubscription<Duration>? _playerSubscription;
 
   @override
   void initState() {
     super.initState();
-    audioPlayer = AudioPlayer();
+    _audioPlayer = AudioPlayer();
+    _audioRecorder = AudioRecorder();
     _initAudioPlayer();
   }
 
   void _initAudioPlayer() {
-    _playerSubscription = audioPlayer.positionStream.listen((position) {
+    _playerSubscription = _audioPlayer.positionStream.listen((position) {
       context.read<AudioRecordingProvider>().updatePlaybackPosition(position.inSeconds);
     });
-    audioPlayer.playerStateStream.listen((state) {
+    _audioPlayer.playerStateStream.listen((state) {
       if (state.processingState == ProcessingState.completed) {
         context.read<AudioRecordingProvider>().stopPlaying();
         setState(() {
-          isPlaybackStarted = false;
+          _isPlaybackStarted = false;
         });
       }
     });
   }
 
   void _handlePlaybackCompleted() {
-    if (isPlaybackStarted) {
+    if (_isPlaybackStarted) {
       context.read<AudioRecordingProvider>().stopPlaying();
-      audioPlayer.stop();
+      _audioPlayer.stop();
       setState(() {
-        isPlaybackStarted = false;
+        _isPlaybackStarted = false;
       });
     }
   }
@@ -61,7 +60,8 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _recordingTimer?.cancel();
     _playerSubscription?.cancel();
-    audioPlayer.dispose();
+    _audioPlayer.dispose();
+    _audioRecorder.dispose(); // Dispose AudioRecorder instance
     super.dispose();
   }
 
@@ -74,19 +74,19 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _toggleRecording(AudioRecordingProvider recordingProvider) async {
     if (recordingProvider.isRecording) {
-      String? filePath = await audioRecorder.stop();
+      String? filePath = await _audioRecorder.stop();
       _recordingTimer?.cancel();
       if (filePath != null) {
         recordingProvider.stopRecording(filePath);
         // No need to start playback here, as it will be handled in the provider
       }
     } else {
-      if (await audioRecorder.hasPermission()) {
+      if (await _audioRecorder.hasPermission()) {
         final Directory appDocumentsDir = await getApplicationDocumentsDirectory();
         final String filePath = p.join(appDocumentsDir.path, "recording.wav");
         recordingProvider.startRecording();
 
-        await audioRecorder.start(
+        await _audioRecorder.start(
           const RecordConfig(),
           path: filePath,
         );
@@ -103,15 +103,6 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // Future<void> _logout(BuildContext context) async {
-  //   SharedPreferences prefs = await SharedPreferences.getInstance();
-  //   await prefs.remove('user_id');
-  //   Navigator.pushReplacement(
-  //     context,
-  //     MaterialPageRoute(builder: (context) => LoginScreen()),
-  //   );
-  // }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -121,10 +112,10 @@ class _HomePageState extends State<HomePage> {
           return Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(),
+              Container(), // Add your top content here
               Stack(
                 alignment: Alignment.bottomCenter,
-              clipBehavior: Clip.none,
+                clipBehavior: Clip.none,
                 children: [
                   Container(
                     width: 300,
@@ -137,7 +128,7 @@ class _HomePageState extends State<HomePage> {
                           color: Colors.grey.withOpacity(0.1),
                           spreadRadius: 5,
                           blurRadius: 7,
-                          offset: Offset(0, 3), // changes position of shadow
+                          offset: const Offset(0, 3), // changes position of shadow
                         ),
                       ],
                     ),
@@ -157,13 +148,12 @@ class _HomePageState extends State<HomePage> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white,
-                        // border: Border.all(color: Color(0xFFFBCDAD)),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
                             spreadRadius: 5,
                             blurRadius: 7,
-                            offset: Offset(0, 3),
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
@@ -176,23 +166,22 @@ class _HomePageState extends State<HomePage> {
                             : Icon(
                           recordingProvider.isRecording ? Icons.stop : Icons.mic,
                           size: 38.0,
-                          color: Color(0xffb98c3c),
-                        ), // Show mic or stop icon based on recording state
+                          color: const Color(0xffb98c3c),
+                        ),
                       ),
-
                     ),
-
                   ),
                   Positioned(
                     bottom: -80,
                     child: Text(
-                    _formatDuration(Duration(seconds: recordingProvider.recordingDuration)),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      color: Color(0xff1c468c),
-                      fontWeight: FontWeight.bold,
+                      _formatDuration(Duration(seconds: recordingProvider.recordingDuration)),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        color: const Color(0xff1c468c),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),)
+                  )
                 ],
               ),
 
