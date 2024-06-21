@@ -1,7 +1,7 @@
 // lib/main.dart
+import 'package:audio_recorder_app/components/CheckLogin.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:audio_recorder_app/pages/home_page.dart';
 import 'package:audio_recorder_app/provider/audio_recording_provider.dart';
 
 void main() {
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const HomePage(),
+      home: CheckLogin(),
     );
   }
 }

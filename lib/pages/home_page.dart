@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_recorder_app/components/loader.dart';
+import 'package:audio_recorder_app/pages/login_page.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -9,6 +10,7 @@ import 'package:record/record.dart';
 import 'package:provider/provider.dart';
 import 'package:just_audio/just_audio.dart';
 import '../provider/audio_recording_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -101,9 +103,27 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Future<void> _logout(BuildContext context) async {
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   await prefs.remove('user_id');
+  //   Navigator.pushReplacement(
+  //     context,
+  //     MaterialPageRoute(builder: (context) => LoginScreen()),
+  //   );
+  // }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // appBar: AppBar(
+      //   backgroundColor: Colors.white,
+      //   actions: [
+      //     IconButton(
+      //       icon: Icon(Icons.logout),
+      //       onPressed: () => _logout(context),
+      //     ),
+      //   ],
+      // ),
       backgroundColor: Colors.white,
       body: Consumer<AudioRecordingProvider>(
         builder: (context, recordingProvider, child) {
@@ -111,46 +131,80 @@ class _HomePageState extends State<HomePage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(),
-              recordingProvider.isLoading
-                  ? const Center(child: ThreeDotLoadingIndicator())
-                  : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Stack(
+                alignment: Alignment.bottomCenter,
+              clipBehavior: Clip.none,
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    width: 300,
+                    height: 300,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                      border: Border.all(color: Colors.black),
+                      color: Colors.white, // Background color
+                      borderRadius: BorderRadius.circular(15), // Rounded corners
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.grey.withOpacity(0.1),
                           spreadRadius: 5,
                           blurRadius: 7,
-                          offset: Offset(0, 3),
+                          offset: Offset(0, 3), // changes position of shadow
                         ),
                       ],
                     ),
-                    child: IconButton(
-                      onPressed: () => _toggleRecording(recordingProvider),
-                      icon: Icon(
-                        recordingProvider.isRecording ? Icons.stop : Icons.mic,
-                        size: 48.0,
-                        color: Color(0xffb98c3c),
+                    child: Center(
+                      child: Image.asset(
+                        'assets/avatar.png', // Replace with your actual image path
+                        width: 290,
+                        height: 290,
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Text(
+                  Positioned(
+                    bottom: -40,
+                    child: Container(
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        // border: Border.all(color: Color(0xFFFBCDAD)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            spreadRadius: 5,
+                            blurRadius: 7,
+                            offset: Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        onPressed: recordingProvider.isLoading
+                            ? null
+                            : () => _toggleRecording(recordingProvider),
+                        icon: recordingProvider.isLoading
+                            ? ThreeDotWaveLoadingIndicator() // Show loading indicator
+                            : Icon(
+                          recordingProvider.isRecording ? Icons.stop : Icons.mic,
+                          size: 38.0,
+                          color: Color(0xffb98c3c),
+                        ), // Show mic or stop icon based on recording state
+                      ),
+
+                    ),
+
+                  ),
+                  Positioned(
+                    bottom: -80,
+                    child: Text(
                     _formatDuration(Duration(seconds: recordingProvider.recordingDuration)),
                     style: const TextStyle(
                       fontSize: 24,
                       color: Color(0xff1c468c),
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
+                  ),)
                 ],
               ),
+
               Container(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(0, 0, 0, 20.0),
