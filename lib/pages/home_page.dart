@@ -115,15 +115,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   backgroundColor: Colors.white,
-      //   actions: [
-      //     IconButton(
-      //       icon: Icon(Icons.logout),
-      //       onPressed: () => _logout(context),
-      //     ),
-      //   ],
-      // ),
       backgroundColor: Colors.white,
       body: Consumer<AudioRecordingProvider>(
         builder: (context, recordingProvider, child) {

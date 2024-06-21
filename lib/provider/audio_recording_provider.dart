@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:just_audio/just_audio.dart'; // Add this import
+import 'package:shared_preferences/shared_preferences.dart';
+
 
 class AudioRecordingProvider extends ChangeNotifier {
   String? _recordingPath;
@@ -45,25 +46,37 @@ class AudioRecordingProvider extends ChangeNotifier {
     });
 
     _socket.on('audio_data', (data) {
+
       Map<String, dynamic> message = data as Map<String, dynamic>;
       List<int> audioData = List<int>.from(message['audio']);
-      _saveAudioLocally(audioData);
+      _playAudioFromBytes(audioData);
     });
   }
 
+
+
   Future<void> _sendAudioToWebSocket(String filePath) async {
-    File audioFile = File(filePath);
-    if (await audioFile.exists()) {
-      List<int> audioBytes = await audioFile.readAsBytes();
-      Map<String, dynamic> response = {
-        "user_id": 1,
-        "prompt": {
-          "audio": audioBytes,
-          "text": "test"
-        }
-      };
-      _socket.emit('audio', response);
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    int? _userId = prefs.getInt('user_id');
+
+    if(_userId != null){
+      File audioFile = File(filePath);
+      if (await audioFile.exists()) {
+        List<int> audioBytes = await audioFile.readAsBytes();
+        Map<String, dynamic> response = {
+          "user_id": _userId,
+          "prompt": {
+            "audio": audioBytes,
+            "text": "test"
+          }
+        };
+        _socket.emit('audio', response);
+      }
+    }else {
+      print("id not found!");
     }
+
   }
 
   void startRecording() {
@@ -104,28 +117,28 @@ class AudioRecordingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _saveAudioLocally(List<int> audioBytes) async {
+  Future<void> _playAudioFromBytes(List<int> audioBytes) async {
     try {
-      final Directory appDocumentsDir = await getApplicationDocumentsDirectory();
-      final filePath = '${appDocumentsDir.path}/beat.mp3';
+      // Create a Stream of bytes from the List<int>
+      final stream = Stream.value(audioBytes).asBroadcastStream();
 
-      await File(filePath).writeAsBytes(audioBytes);
-      _recordingPath = filePath;
-
+      // Set the audio source to the AudioPlayer from bytes
+      await _audioPlayer.setAudioSource(
+        AudioSource.uri(
+          Uri.dataFromBytes(
+            audioBytes,
+            mimeType: 'audio/mpeg', // Adjust mime type as necessary
+          ),
+        ),
+      );
       _isLoading = false;
       notifyListeners();
 
-      // Play the beat.mp3 file automatically
-      await _playSavedAudio();
-    } catch (e) {
-      print('Error saving audio locally: $e');
-    }
-  }
-
-  Future<void> _playSavedAudio() async {
-    if (_recordingPath != null) {
-      await _audioPlayer.setFilePath(_recordingPath!);
+      // Play the audio
       await _audioPlayer.play();
+
+    } catch (e) {
+      print('Error playing audio: $e');
     }
   }
 }
