@@ -43,6 +43,8 @@ class AudioRecordingProvider extends ChangeNotifier {
     _socket.onDisconnect((_) {
       print('Disconnected from WebSocket server');
       _socketConnected = false;
+      // Attempt to reconnect
+      connectWebSocket(); // Example: Reconnect immediately
     });
 
     _socket.on('audio_data', (data) {
@@ -125,29 +127,25 @@ class AudioRecordingProvider extends ChangeNotifier {
   Future<void> _playAudioFromBytes(List<int> audioBytes) async {
     try {
 
-
       // Save audio bytes to a temporary file
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/temp_audio.mp3');
-      await tempFile.writeAsBytes(audioBytes);
+      // final tempDir = await getTemporaryDirectory();
+      // final tempFile = File('${tempDir.path}/temp_audio.mp3');
+      // await tempFile.writeAsBytes(audioBytes);
 
       // Set the audio source to the AudioPlayer
-      await _audioPlayer.setFilePath(tempFile.path);
+      // await _audioPlayer.setFilePath(tempFile.path);
 
 
+      // Create a data URI from the audio bytes
+      final uri = Uri.dataFromBytes(
+        audioBytes,
+        mimeType: 'audio/mpeg', // Adjust mime type as necessary
+      );
 
-      // // Create a Stream of bytes from the List<int>
-      // final stream = Stream.value(audioBytes).asBroadcastStream();
-      //
-      // // Set the audio source to the AudioPlayer from bytes
-      // await _audioPlayer.setAudioSource(
-      //   AudioSource.uri(
-      //     Uri.dataFromBytes(
-      //       audioBytes,
-      //       mimeType: 'audio/mpeg', // Adjust mime type as necessary
-      //     ),
-      //   ),
-      // );
+      // Set the audio source to the AudioPlayer from the data URI
+      await _audioPlayer.setAudioSource(
+        AudioSource.uri(uri),
+      );
 
       _isLoading = false;
       notifyListeners();
